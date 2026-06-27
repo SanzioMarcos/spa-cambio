@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="pt-BR" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Conversor de Moedas Global</title>
+    
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css">
+    
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+</head>
+<body>
+
+    <main class="container" style="max-width: 450px; margin-top: 8vh;"
+          x-data="{ 
+              valorBrl: 100, 
+              moedaDestino: 'USD', 
+              taxas: {}, 
+              carregando: true,
+              erro: false,
+
+              // Dicionário para exibir o nome completo das moedas nas opções
+              nomesMoedas: {
+                  USD: 'USD - Dólar Americano 🇺🇸',
+                  EUR: 'EUR - Euro 🇪🇺',
+                  GBP: 'GBP - Libra Esterlina 🇬🇧',
+                  JPY: 'JPY - Iene Japonês 🇯🇵',
+                  ARS: 'ARS - Peso Argentino 🇦🇷',
+                  CAD: 'CAD - Dólar Canadense 🇨🇦',
+                  AUD: 'AUD - Dólar Australiano 🇦🇺',
+                  CHF: 'CHF - Franco Suíço 🇨🇭',
+                  CNY: 'CNY - Yuan Chinês 🇨🇳'
+              },
+
+              async buscarTaxas() {
+                  this.carregando = true;
+                  this.erro = false;
+                  try {
+                      // Buscando as taxas com base no Real Brasileiro (BRL)
+                      let resposta = await fetch('https://open.er-api.com/v6/latest/BRL');
+                      if (!resposta.ok) throw new Error();
+                      let dados = await resposta.json();
+                      
+                      // Guardamos apenas o objeto de taxas (rates) que vem da API
+                      this.taxas = dados.rates;
+                  } catch (e) {
+                      this.erro = true;
+                  } finally {
+                      this.carregando = false;
+                  }
+              },
+
+              // Função que faz o cálculo da conversão e formata o número
+              calcularConversao() {
+                  if (!this.taxas[this.moedaDestino] || !this.valorBrl) return '0,00';
+                  
+                  // O valor digitado em BRL é multiplicado pela taxa da moeda escolhida
+                  let resultado = this.valorBrl * this.taxas[this.moedaDestino];
+                  
+                  // Retorna o valor formatado com duas casas decimais
+                  return resultado.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+              },
+
+              // Função para formatar o valor de entrada como moeda real
+              formatarBrl() {
+                  let numero = parseFloat(this.valorBrl) || 0;
+                  return numero.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+              }
+          }"
+          x-init="buscarTaxas()">
+
+        <header style="text-align: center; margin-bottom: 25px;">
+            <h2 style="color: #4dadf7; margin: 0;">💵 Câmbio Rápido</h2>
+            <p style="color: var(--pico-muted-color);">Conversão internacional baseada no Real (BRL)</p>
+        </header>
+
+        <div style="text-align: center; margin: 40px 0;" x-show="carregando">
+            <p aria-busy="true">Obtendo taxas de câmbio atualizadas...</p>
+        </div>
+
+        <div style="text-align: center; margin: 30px 0; display: none;" x-show="erro">
+            <p style="color: #f56565; font-weight: bold;">⚠️ Erro ao conectar com o servidor financeiro. Tente novamente mais tarde.</p>
+        </div>
+
+        <div x-show="!carregando && !erro" style="display: none;">
+            <article style="margin: 0; padding: 25px;">
+                
+                <label for="input-brl">Valor em Real (BRL):</label>
+                <input type="number" id="input-brl" x-model.number="valorBrl" placeholder="Digite o valor em R$..." min="0" step="0.01">
+
+                <label for="select-moeda">Converter para:</label>
+                <select id="select-moeda" x-model="moedaDestino">
+                    <template x-for="(nome, codigo) in nomesMoedas" :key="codigo">
+                        <option :value="codigo" x-text="nome"></option>
+                    </template>
+                </select>
+
+                <hr style="margin: 20px 0; border-color: var(--pico-border-color);">
+
+                <div style="text-align: center; background-color: rgba(255,255,255,0.02); padding: 15px; border-radius: 8px;">
+                    <p style="margin: 0; font-size: 0.9rem; color: var(--pico-muted-color);">
+                        <span x-text="formatarBrl()"></span> equivale a:
+                    </p>
+                    <h1 style="margin: 5px 0 0 0; color: #a3e635;">
+                        <span x-text="moedaDestino + ' ' + calcularConversao()"></span>
+                    </h1>
+                </div>
+
+            </article>
+        </div>
+
+    </main>
+
+</body>
+</html>
